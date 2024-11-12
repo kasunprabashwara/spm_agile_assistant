@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request 
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from model import get_response
 import os
+import re
 
 app = FastAPI()
 
@@ -56,9 +57,12 @@ async def get_chat_interface():
                 });
                 
                 const result = await response.json();
+                
                 const botMessage = document.createElement("div");
                 botMessage.className = "chat-message bot";
-                botMessage.textContent = result.answer;
+
+                // Use innerHTML to render HTML-formatted response
+                botMessage.innerHTML = result.answer;
                 chatBox.appendChild(botMessage);
                 chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -74,6 +78,29 @@ async def get_chat_interface():
 async def chat(query: Query):
     try:
         response = get_response(query.question)
-        return {"answer": response}
+        
+        # Format the response to include HTML formatting
+        formatted_response = format_response(response)
+
+        return {"answer": formatted_response}
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
+
+def format_response(response: str) -> str:
+    """
+    Function to format the response into HTML-friendly format
+    - Converts newlines to <br> tags
+    - Converts **bold** to <strong>bold</strong>
+    - Converts numbered lists (1. item) into <ol> and <li> tags
+    """
+    # Replace newlines with <br> tags
+    response = response.replace("\n", "<br>")
+
+    # Replace markdown-style bold with HTML <strong> tags
+    response = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", response)
+
+    # Convert numbered lists into <ol> and <li> tags
+    response = re.sub(r"(\d+)\.\s(.*?)(?=\s*\d+\.|\s*$)", r"<li>\2</li>", response)
+    response = re.sub(r"<li>(.*?)</li>", r"<ol><li>\1</li></ol>", response, count=1)
+
+    return response
