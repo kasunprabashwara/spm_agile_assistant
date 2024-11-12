@@ -1,0 +1,10 @@
+fastapi
+langchain
+langchain_openai
+langchain-community
+openai
+tiktoken
+faiss-cpu
+python-dotenv
+uvicorn
+pypdf
